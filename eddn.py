@@ -15,7 +15,6 @@ def listen():
 
     while True:
         message = socket.recv()
-
         try:
             decompressed = zlib.decompress(message)
             data = json.loads(decompressed)
