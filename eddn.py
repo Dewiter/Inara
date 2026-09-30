@@ -1,32 +1,55 @@
 import json
+import logging
 import zlib
+from collections.abc import AsyncIterator
+from datetime import datetime
 
 import zmq
+import zmq.asyncio
+
+from domain.commodity import CommodityPrice
+
+log = logging.getLogger(__name__)
 
 EDDN_URL = "tcp://eddn.edcd.io:9500"
+COMMODITY_SCHEMA_PREFIX = "https://eddn.edcd.io/schemas/commodity/"
 
 
-def listen():
-    context = zmq.Context()
+async def messages() -> AsyncIterator[dict]:
+    """Yield decoded EDDN envelopes forever."""
+    context = zmq.asyncio.Context()
     socket = context.socket(zmq.SUB)
     socket.connect(EDDN_URL)
     socket.setsockopt_string(zmq.SUBSCRIBE, "")
-    print("Connected to EDDN")
+    log.info("Connected to EDDN")
 
     while True:
-        message = socket.recv()
+        raw = await socket.recv()
         try:
-            decompressed = zlib.decompress(message)
-            data = json.loads(decompressed)
+            yield json.loads(zlib.decompress(raw))
         except (zlib.error, json.JSONDecodeError) as error:
-            print(f"Could not decode EDDN message: {error}")
-            continue
-
-        schema = data.get("$schemaRef", "")
-
-        if "commodity" in schema:
-            print(json.dumps(data, indent=2))
+            log.warning("Could not decode EDDN message: %s", error)
 
 
-if __name__ == "__main__":
-    listen()
+def is_commodity(data: dict) -> bool:
+    return data.get("$schemaRef", "").startswith(COMMODITY_SCHEMA_PREFIX)
+
+
+def parse_commodity(data: dict) -> list[CommodityPrice]:
+    """Translate an EDDN commodity envelope into domain objects."""
+    msg = data["message"]
+    updated_at = datetime.fromisoformat(msg["timestamp"])
+    return [
+        CommodityPrice(
+            market_id=msg["marketId"],
+            station=msg["stationName"],
+            system=msg["systemName"],
+            name=c["name"],
+            buy_price=c["buyPrice"],
+            sell_price=c["sellPrice"],
+            stock=c["stock"],
+            demand=c["demand"],
+            updated_at=updated_at,
+        )
+        for c in msg["commodities"]
+    ]
