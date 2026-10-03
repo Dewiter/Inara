@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from domain.commodity import CommodityPrice
+from inara.domain.commodity import CommodityPrice
 
 
 class CommodityRepository(Protocol):
