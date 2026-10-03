@@ -15,5 +15,5 @@ async def get_session():
 
 def get_commodity_service(
     session: AsyncSession = Depends(get_session),
-) -> CommodityService:
-    return CommodityService(SqlCommodityRepository(session))
+) -> CommodityService:...
+    # return CommodityService(SqlCommodityRepository(session))

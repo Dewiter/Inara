@@ -20,7 +20,7 @@ async def main() -> None:
             log.warning("Skipping malformed commodity message: %r", error)
             continue
         await service.record_market(prices)
-        log.info("Recorded %d prices", len(prices))
+        log.info("Recorded %d prices\n Station: %s", len(prices), prices[0].station)
 
 
 if __name__ == "__main__":
