@@ -1,10 +1,9 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict
 
-from inara.controller.rest.dependency import get_commodity_service
-from inara.service.commodity import CommodityService
+from inara.controller.rest.dependency import CommodityServiceDep
 
 router = APIRouter(prefix="/commodities", tags=["commodities"])
 
@@ -19,8 +18,8 @@ class PriceOut(BaseModel):
     updated_at: datetime
 
 
-@router.get("/{name}best-sell", response_model=list[PriceOut])
-async def best_sell(name: str, svc: CommodityService = Depends(get_commodity_service)):
+@router.get("/{name}/best-sell", response_model=list[PriceOut])
+async def best_sell(name: str, svc: CommodityServiceDep):
     prices = await svc.best_sell_locations(name.lower())
     if not prices:
         raise HTTPException(status_code=404, detail=f"No data for '{name}'")
